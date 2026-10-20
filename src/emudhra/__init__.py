@@ -122,7 +122,7 @@ def cmd_forge(args: argparse.Namespace) -> int:
             name = x509.Name(
                 [
                     x509.NameAttribute(NameOID.COMMON_NAME, f"CTF Demo CA {tag}"),
-                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "ctf-key-audit demo"),
+                    x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Fake demo"),
                 ]
             )
             cert = (
@@ -230,7 +230,7 @@ def generate_ca(cn: str, days: int, out_dir: str):
     key = ec.generate_private_key(CURVE)
     name = x509.Name([
         x509.NameAttribute(NameOID.COMMON_NAME, cn),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "ctf-key-audit CA"),
+        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Fake Emudhra"),
     ])
     now = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=5)
     cert = (
@@ -521,7 +521,7 @@ def cmd_leaf(args: argparse.Namespace) -> int:
         x509.CertificateBuilder()
         .subject_name(x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, args.cn),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "ctf-key-audit leaf"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Fake leaf"),
         ]))
         .issuer_name(ca_cert.subject)
         .public_key(leaf_key.public_key())

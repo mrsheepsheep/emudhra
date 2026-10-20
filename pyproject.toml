@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "emudhra"
 version = "1.0.0"
-description = "CTF toolkit for the ec-small-scalar weak-key class on P-384: audit CA keys, crack enumerable scalars, and forge fully-chained TLS leaf certificates"
+description = "Toolkit for the ec-small-scalar weak-key class on P-384: audit CA keys, crack enumerable scalars, and forge fully-chained TLS leaf certificates"
 readme = "README.md"
 license = { text = "MIT" }
-authors = [{ name = "ctf-key-audit" }]
+authors = [{ name = "Alexandre S." }]
 requires-python = ">=3.10"
 dependencies = [
     "cryptography>=42.0",
@@ -23,7 +23,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://ctf.example/ctf-key-audit"
+Homepage = "https://github.com/mrsheepsheep/emudhra"
 
 [project.scripts]
 emudhra = "emudhra:main"
