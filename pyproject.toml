@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "emudhra"
+version = "1.0.0"
+description = "CTF toolkit for the ec-small-scalar weak-key class on P-384: audit CA keys, crack enumerable scalars, and forge fully-chained TLS leaf certificates"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "ctf-key-audit" }]
+requires-python = ">=3.10"
+dependencies = [
+    "cryptography>=42.0",
+]
+keywords = ["ctf", "pki", "x509", "elliptic-curve", "weak-keys", "tls"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: Information Technology",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+]
+
+[project.urls]
+Homepage = "https://ctf.example/ctf-key-audit"
+
+[project.scripts]
+emudhra = "emudhra:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]

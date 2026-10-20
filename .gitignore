@@ -1,0 +1,30 @@
+# Python packaging
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tool outputs (keep the CA hierarchy in cas/, ignore generated material)
+certs/
+evidence/
+*.tar.gz
+*.log
+
+# Generated keys & certificates at repo root
+*.key
+*.key.pem
+*.crt.pem
+*.pem
+!cas/*.pem
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Nix
+result
