@@ -309,15 +309,17 @@ def load_trust_store() -> list[x509.Certificate]:
 def build_fullchain(leaf: x509.Certificate,
                     ca_cert: Optional[x509.Certificate],
                     ca_cert_path: Optional[str],
-                    extra_paths: Optional[list[str]]) -> list[x509.Certificate]:
-    """Assemble leaf + intermediate chain, up to (excluding) the root.
+                    extra_paths: Optional[list[str]]) -> tuple[list, Optional]:
+    """Assemble leaf + intermediate chain, plus the self-signed root if found.
 
-    Issuers are resolved from, in order: the signing CA cert, its sibling
-    certs in the same directory (e.g. a cas/ hierarchy), --chain files,
-    and the system trust store. Each link is verified by signature
-    (verify_directly_issued_by), so same-name-different-key certs won't
-    chain. Stops at the self-signed root (roots are trust anchors, not
-    wire material); warns when a link cannot be found.
+    Returns (chain, root): `chain` is leaf + intermediates (root excluded —
+    roots are trust anchors, not wire material); `root` is the self-signed
+    certificate the chain terminates at, or None if the chain is
+    incomplete. Issuers are resolved from, in order: the signing CA cert,
+    its sibling certs in the same directory (e.g. a cas/ hierarchy),
+    --chain files, and the system trust store. Each link is verified by
+    signature (verify_directly_issued_by), so same-name-different-key certs
+    won't chain.
     """
     pool: list[x509.Certificate] = []
     if ca_cert is not None:
@@ -342,6 +344,7 @@ def build_fullchain(leaf: x509.Certificate,
     pool.extend(load_trust_store())
 
     chain = [leaf]
+    root: Optional[x509.Certificate] = None
     current = leaf
     seen = {leaf.serial_number}
     while current.issuer != current.subject:
@@ -361,13 +364,14 @@ def build_fullchain(leaf: x509.Certificate,
                   f"CA cert / --chain / trust store", file=sys.stderr)
             break
         if nxt.issuer == nxt.subject:  # self-signed root: trust anchor
+            root = nxt
             break
         if nxt.serial_number in seen:  # loop guard
             break
         seen.add(nxt.serial_number)
         chain.append(nxt)
         current = nxt
-    return chain
+    return chain, root
 
 
 def verify_against_store(leaf: x509.Certificate,
@@ -407,6 +411,7 @@ Files
     certificate chain to serve (leaf + intermediates)
 {key}
     leaf private key
+{p12}   PKCS#12 bundle (key + leaf + full chain incl. root), pass: {p12pass}
 README.txt
     this file
 
@@ -561,7 +566,7 @@ def cmd_leaf(args: argparse.Namespace) -> int:
     signed_by = args.ca_cert or os.path.join(args.out_dir, "ca.crt.pem")
     print(f"leaf key : {key_path}")
     print(f"leaf cert: {cert_path}  (signed by {signed_by})")
-    chain = build_fullchain(cert, ca_cert, args.ca_cert, args.chain)
+    chain, chain_root = build_fullchain(cert, ca_cert, args.ca_cert, args.chain)
     full_path = os.path.join(args.out_dir, f"{stem}.fullchain.pem")
     with open(full_path, "wb") as fh:
         for c in chain:
@@ -571,9 +576,19 @@ def cmd_leaf(args: argparse.Namespace) -> int:
     with open(srv_path, "wb") as fh:
         fh.write(open(full_path, "rb").read())
         fh.write(key_pem)
+    p12_pass = args.p12_pass or "emudhra"
+    p12_path = os.path.join(args.out_dir, f"{stem}.p12")
+    with open(p12_path, "wb") as fh:
+        from cryptography.hazmat.primitives.serialization import pkcs12
+        fh.write(pkcs12.serialize_key_and_certificates(
+            name=args.cn.encode(), key=leaf_key, cert=cert,
+            cas=chain[1:] + ([chain_root] if chain_root is not None else []),
+            encryption_algorithm=serialization.BestAvailableEncryption(
+                p12_pass.encode())))
     print(f"fullchain: {full_path} ({len(chain)} cert(s): leaf + "
           f"{len(chain) - 1} intermediate(s))")
     print(f"server pem: {srv_path} (fullchain + key, single file)")
+    print(f"pkcs12    : {p12_path} (pass: {p12_pass!r})")
     ok = verify_against_store(cert, chain[1:], args.cn)
     if ok is True:
         print("chain check: VALIDATES against the system trust store "
@@ -587,6 +602,7 @@ def cmd_leaf(args: argparse.Namespace) -> int:
         fh.write(LEAF_README.format(
             cn=args.cn, fullchain=os.path.basename(full_path),
             key=os.path.basename(key_path), server=os.path.basename(srv_path),
+            p12=os.path.basename(p12_path), p12pass=p12_pass,
             ca=args.ca_cert or "auto-generated CA",
             valid_until=cert.not_valid_after_utc.date()))
     print("usage notes: README.txt")
@@ -706,6 +722,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         p.add_argument("--days", type=int, default=7, help="validity in days (default 7)")
         p.add_argument("--out-dir", default=None,
                        help="output dir (default: certs/<cn>)")
+        p.add_argument("--p12-pass", default=None,
+                       help="PKCS#12 password (default: 'emudhra'); the .p12 "
+                            "bundles key + leaf + full chain incl. root")
 
     p = sub.add_parser(
         "leaf", help="sign a TLS server cert with a CA you own (mitm step); "

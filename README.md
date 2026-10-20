@@ -85,7 +85,15 @@ emudhra leaf --ca-cert cas/EM-DV-TLS-CA-G3B.crt.pem \
 mrsheepsheep.google.com.server.pem      # fullchain + key, single file
 mrsheepsheep.google.com.fullchain.pem   # leaf + intermediate + parent CA
 mrsheepsheep.google.com.key.pem         # leaf private key
+mrsheepsheep.google.com.p12             # PKCS#12: key + leaf + full chain incl. root (importable)
 README.txt                              # serve/curl commands
+```
+
+Inspect the PKCS#12 (default password `emudhra`, override with `--p12-pass`):
+
+```bash
+openssl pkcs12 -in certs/mrsheepsheep.google.com/mrsheepsheep.google.com.p12 \
+    -passin pass:emudhra -info -noout
 ```
 
 The **fullchain** is what a server should present: the leaf alone fails strict
